@@ -4,6 +4,8 @@ A user-invoked [Claude Code](https://claude.com/claude-code) skill that **checkp
 
 Think of it as a save point for a conversation: at any moment you can stamp a recoverable fork, keep working, and later either resume that fork or pop open a brand-new terminal window running an interactive copy of it.
 
+Simply: This is a skill with the commands and instruction needed to guide Claude to quickly use command line calls to fork your current conversation whenever you type /save-fork in the claude cli.  It is relatively quick (10-20sec), and does not disrupt your current session in any way. You can open a terminal in that directory later and run 'claude --resume' (with no session id) and choose from a list of your generated milestone session forks. You can also fork FROM those if you wish to retain them as a checkpoint (Anthropic claims they don't support forking from a fork but I have had no issues so far - still be aware it's unofficial once you fork the fork).
+
 ---
 
 ## What it does
@@ -92,30 +94,6 @@ This opens a **new GUI terminal window** running an interactive, forked copy of 
 
 ---
 
-## Creative approaches used
-
-This skill leans on several non-obvious techniques. They are described here in prose (no source listings) so you can understand *why* it works the way it does.
-
-- **Reconstructing the active session ID with no public API.** Claude Code doesn't hand a skill its own session ID. The skill recovers it by reproducing Claude Code's own project-directory encoding (every non-alphanumeric character in the working directory path is mapped to a dash), locating the matching folder under `~/.claude/projects/`, and selecting the most-recently-modified `*.jsonl` transcript as the active session.
-
-- **Forking via a headless seed prompt so nothing steals your terminal.** The checkpoint is created by invoking the `claude` CLI in headless mode against the parent session with `--fork-session` and a freshly minted session UUID. Because it runs headless with a one-shot seed prompt, the child process materializes a resumable session and exits on its own — your foreground session is never interrupted.
-
-- **Fully detached background spawning, cross-platform.** The child is launched so it survives independently of the skill process. On POSIX this uses a new session (the `setsid` behavior); on Windows it uses detached-process creation flags. File descriptors are closed and output is redirected to a per-fork temp log so a failed spawn can still be inspected afterward.
-
-- **Terminal-emulator autodetection for the interactive spawn.** Opening a *visible* new window is intentionally OS-specific:
-  - **Linux:** walks a preference chain of common emulators (gnome-terminal → x-terminal-emulator → konsole → tilix → xfce4-terminal → alacritty → kitty → foot → terminator → xterm), using whichever is found on `PATH`.
-  - **macOS:** drives the built-in Terminal.app through AppleScript via `osascript`, with careful quote-escaping.
-  - **Windows:** prefers Windows Terminal (`wt.exe`) and falls back to a new `cmd` console.
-  In every case the launched window is told to stay open after `claude` exits so you can read any startup error.
-
-- **Crash-safe, schema-versioned state store.** The project-level JSON store is always written to a temporary file and then atomically moved into place, so an interrupted write can never corrupt it. Reads tolerate a missing or malformed file by falling back to an empty, versioned store, and the schema carries a version number for forward compatibility.
-
-- **Dual logging by design.** Every checkpoint is recorded both in a human-friendly append-only log under your home directory and in the structured per-project JSON store — one for quick scanning across all projects, one for programmatic listing and spawning within a project.
-
-- **Deliberate fork-of-fork support.** Some tooling refuses to fork a session that is itself a fork. Claude Code's CLI permits it, and this skill intentionally allows spawning from any historical fork regardless of its lineage — so a checkpoint chain can branch as deeply as you like.
-
----
-
 ## Files
 
 | File | Role |
@@ -131,6 +109,6 @@ This skill leans on several non-obvious techniques. They are described here in p
 
 ## Notes & limitations
 
-- The skill is **user-invoked only** — Claude will not trigger it on its own.
+- The skill is **user-invoked only** — Claude will not trigger it on its own. BUT: it can be powerful to have claude reference these commands when creating automation!
 - It depends on the internal layout of `~/.claude/projects/` and on `claude` CLI flags (`--resume`, `--fork-session`, `--session-id`, `-p`). If a future Claude Code release changes either, the discovery or spawn step may need updating.
 - The interactive spawn needs a GUI terminal emulator on `PATH`; in a pure headless/SSH environment with none available, the spawn step will report that no supported terminal was found.
