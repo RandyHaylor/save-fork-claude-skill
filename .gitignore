@@ -1,0 +1,6 @@
+# Python bytecode cache
+__pycache__/
+*.pyc
+
+# Local per-project fork store — contains this machine's real session UUIDs/PIDs
+.claude/saved-forks.json
