@@ -67,8 +67,11 @@ def spawn_detached_save_fork_subprocess(
     the new fork's tail, e.g. "[saved fork: <label>]" or "[launched fork:
     <label>]". Caller picks whichever fits the semantic.
     """
-    # Short status-style seed.
-    seed_prompt = f"[{seed_kind}: {label}]"
+    # Short status-style seed. The parenthetical at the end suppresses any
+    # attempt by the model to actually act on the message — without it,
+    # Claude treats the bracketed status as an instruction and responds
+    # substantively.
+    seed_prompt = f"[{seed_kind}: {label}] (save-fork process seed, ignore this)"
     child_log_path = get_temp_log_path_for_fork(fork_sid)
     child_log_fh = open(child_log_path, "wb")
     proc = subprocess.Popen(
