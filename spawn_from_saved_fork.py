@@ -47,7 +47,7 @@ def do_spawn_window_from_fork(
 ) -> tuple:
     """Open a new interactive terminal window resuming/forking ``source_fork_sid``.
 
-    When ``refork_source`` is True (default — the /spawn-from-saved-fork
+    When ``refork_source`` is True (default — the spawn-from-saved-fork
     semantic), a NEW fork SID is generated and the new window runs
     ``claude --resume <source> --fork-session --session-id <new>``; the
     source fork stays immutable. The new fork's jsonl is NOT materialized

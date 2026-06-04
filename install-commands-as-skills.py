@@ -41,23 +41,12 @@ COMMAND_SKILL_STUB_REGISTRY = [
     {
         "skill_name": "list-forks",
         "description": (
-            "List BOTH saved-forks and launched-forks for the current project, "
-            "with action hints. Saved-forks are checkpoints (forkable via "
-            "/spawn-from-saved-fork); launched-forks are live sessions that "
-            "were opened in their own window (reopenable via "
-            "/relaunch-forked-session)."
+            "List BOTH saved-forks and launched-forks for the current project. "
+            "This is the entry point for picking a fork to act on — say "
+            "\"relaunch #2\" or \"spawn from #3\" after viewing the list and "
+            "Claude will run the corresponding script directly."
         ),
         "script_relpath": "list_forks.py",
-    },
-    {
-        "skill_name": "relaunch-forked-session",
-        "description": (
-            "Reopen a previously-launched fork in a new terminal window. "
-            "Reads the project's launched-forks list and resumes the chosen "
-            "entry's launched_fork_sid directly. Use to revisit a launched "
-            "session after closing its window."
-        ),
-        "script_relpath": "relaunch_forked_session.py",
     },
 ]
 

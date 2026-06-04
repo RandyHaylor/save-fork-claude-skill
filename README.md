@@ -10,15 +10,18 @@ Simply: This is a skill with the commands and instruction needed to guide Claude
 
 ## What's included
 
-Five slash commands, all installed automatically by `install-commands-as-skills.py`:
+Three user-facing slash commands (installed by `install-commands-as-skills.py`):
 
 | Slash command | Effect |
 |--------------|--------|
 | **`/save-fork [label]`** | Snapshot the current conversation as a new resumable session. Your active session continues unchanged. |
-| **`/spawn-from-saved-fork <idx-or-sid> [label]`** | Fork one of your saved checkpoints into a new interactive **GUI terminal window**, fully detached from the current session. |
 | **`/launch-fork [label]`** | One-shot: save-fork the live session, then open the result in a new GUI terminal window — two durable forks created (a checkpoint plus a live working session in a window). |
-| **`/list-forks`** | Show BOTH the saved-forks and launched-forks tables for the current project, plus action hints. |
-| **`/relaunch-forked-session <idx-or-sid>`** | Reopen a previously-launched fork in a new GUI terminal window. |
+| **`/list-forks`** | Show BOTH the saved-forks and launched-forks tables for the current project. **This is the entry point for re-launching or spawning** — after viewing, just tell Claude in the chat "relaunch #2" or "spawn from #3" and it will run the right script directly. |
+
+Two helper scripts live in the repo but are NOT exposed as slash commands — they're called by Claude on your behalf from the `/list-forks` flow:
+
+- `spawn_from_saved_fork.py` — fork an existing saved checkpoint into a new GUI window.
+- `relaunch_forked_session.py` — reopen a previously launched fork in a new GUI window.
 
 Three on-disk stores:
 
@@ -45,7 +48,7 @@ python3 ~/.claude/skills/save-fork/install-commands-as-skills.py
 python "%USERPROFILE%\.claude\skills\save-fork\install-commands-as-skills.py"
 ```
 
-The installer creates `~/.claude/skills/{launch-fork, list-forks, relaunch-forked-session}/SKILL.md` stubs that delegate to the scripts in this repo. The pre-existing `/save-fork` and `/spawn-from-saved-fork` skill folders (if you already had them) are unchanged.
+The installer creates `~/.claude/skills/{launch-fork, list-forks}/SKILL.md` stubs that delegate to the scripts in this repo. The pre-existing `/save-fork` skill folder (if you already had it) is unchanged. `spawn_from_saved_fork.py` and `relaunch_forked_session.py` are NOT registered as slash commands — they're invoked by Claude on your behalf when you act on a row from `/list-forks`.
 
 To remove the stubs:
 
@@ -71,23 +74,25 @@ Inside any Claude Code session:
 
 The label is optional. The skill prints a single line, `Created Fork: <SID>`, and returns in well under a second; the actual `claude -p` checkpoint subprocess runs detached. To resume the fork later: `claude --resume <SID>`.
 
-All four window-affecting commands follow the same one-line output style:
+All four window-affecting scripts follow the same one-line output style:
 
-- `/save-fork`              → `Created Fork: <SID>`
-- `/launch-fork`            → `Launched Fork: <SID>` (after the ~10-60s two-tier setup)
-- `/spawn-from-saved-fork`  → `Spawned Fork: <SID>`
-- `/relaunch-forked-session` → `Relaunched Fork: <SID>`
+- `/save-fork`               → `Created Fork: <SID>`
+- `/launch-fork`             → `Launched Fork: <SID>` (after the ~10-60s two-tier setup)
+- `spawn_from_saved_fork.py` → `Spawned Fork: <SID>` (invoked via `/list-forks` flow)
+- `relaunch_forked_session.py` → `Relaunched Fork: <SID>` (invoked via `/list-forks` flow)
 
 The full lineage (parent SID, intermediate save-fork SID, terminal PID, display name, log paths) is always recoverable from `<cwd>/.claude/saved-forks.json` and `<cwd>/.claude/launched-forks.json`. Use `/list-forks` to see it.
 
 ### Fork an existing saved checkpoint into a new live window
 
-```
-/spawn-from-saved-fork 3 explore alt approach
-/spawn-from-saved-fork 6db573e3 explore alt approach
+Just tell Claude in chat: *"spawn from saved fork #3"* or *"spawn from saved fork 6db573e3"*. Claude reads the `/list-forks` output, finds the row, and runs `spawn_from_saved_fork.py` for you. You can also run the script directly:
+
+```bash
+python3 ~/.claude/skills/save-fork/spawn_from_saved_fork.py 3 explore alt approach
+python3 ~/.claude/skills/save-fork/spawn_from_saved_fork.py 6db573e3 explore alt approach
 ```
 
-Pick by 1-based index (from `/list-forks`) or by SID prefix. Opens a new GUI terminal window running an interactive forked copy of the selected checkpoint.
+Opens a new GUI terminal window running an interactive forked copy of the selected checkpoint.
 
 ### One-shot: fork the current session into a new window
 
@@ -111,13 +116,15 @@ The seed prompts are kept short and status-like — `[saved fork: <label>]` for 
 /list-forks
 ```
 
-Prints both tables (saved checkpoints + launched live sessions), each with the lineage columns explained. Followed by action hints showing the exact slash command for each next-step.
+Prints both tables (saved checkpoints + launched live sessions) with the lineage columns explained, followed by next-step hints. The list itself is the entry point: just tell Claude *"relaunch #2"* or *"spawn from #3"* in the chat and it runs the right script for you.
 
 ### Reopen a previously-launched fork in another window
 
-```
-/relaunch-forked-session 1
-/relaunch-forked-session 49c07d03
+Tell Claude in chat: *"relaunch launched fork #1"* or *"relaunch 49c07d03"*. Or invoke the script directly:
+
+```bash
+python3 ~/.claude/skills/save-fork/relaunch_forked_session.py 1
+python3 ~/.claude/skills/save-fork/relaunch_forked_session.py 49c07d03
 ```
 
 Resumes the chosen launched-fork SID directly (no further fork). The same session is reopened — your prior conversation in that fork is still there.
@@ -175,7 +182,7 @@ This skill leans on several non-obvious techniques. They are described here in p
 | `list_forks.py` | The **list** operation (`/list-forks`): renders both saved-forks and launched-forks tables with action hints. |
 | `spawn_from_saved_fork.py` | The **spawn-from** operation: open a detached interactive window from a chosen saved fork. Exports `do_spawn_window_from_fork`. |
 | `launch_fork_current_session_into_new_window.py` | The **launch** operation (`/launch-fork`): two-tier orchestration; uses `do_save_fork_checkpoint` twice and then `do_spawn_window_from_fork` with `refork_source=False`. |
-| `relaunch_forked_session.py` | The **relaunch** operation (`/relaunch-forked-session`): reopen a launched fork. |
+| `relaunch_forked_session.py` | The **relaunch** operation (invoked via `/list-forks` flow): reopen a launched fork. |
 | `saved_forks_store.py` | Shared helpers for the atomic, schema-versioned saved-forks JSON store. |
 | `launched_forks_store.py` | Shared helpers for the atomic, schema-versioned launched-forks JSON store. |
 | `active_session_locator.py` | Discover the active session ID and read its display name from the JSONL. |
@@ -190,4 +197,4 @@ This skill leans on several non-obvious techniques. They are described here in p
 - The skill depends on the internal layout of `~/.claude/projects/` and on `claude` CLI flags (`--resume`, `--fork-session`, `--session-id`, `-p`, `--name`). If a future Claude Code release changes any of these, the discovery, spawn, or naming step may need updating.
 - The interactive spawn needs a GUI terminal emulator on `PATH`; in a pure headless/SSH environment with none available, the spawn step will report that no supported terminal was found.
 - `/launch-fork` waits for both tier-1 and tier-2 `claude -p` subprocesses to finish writing their jsonls before opening the window, so it has noticeable latency (~10-60s end to end). This is by design — it's what makes the launched fork durable even on an immediate Ctrl+C.
-- `--fork-session --session-id NEW` without `-p` does NOT materialize `NEW.jsonl` until first user input. The two-tier launch path is the workaround. The single-tier `/spawn-from-saved-fork` retains this Claude-Code quirk by design (it's forking a pre-existing checkpoint you want to preserve).
+- `--fork-session --session-id NEW` without `-p` does NOT materialize `NEW.jsonl` until first user input. The two-tier launch path is the workaround. The single-tier `spawn_from_saved_fork.py` retains this Claude-Code quirk by design (it's forking a pre-existing checkpoint you want to preserve).

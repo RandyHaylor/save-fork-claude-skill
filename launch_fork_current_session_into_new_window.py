@@ -8,8 +8,8 @@ window opens:
     do_save_fork_checkpoint(parent=live_session, log_to_saved_forks=True,
                             wait_for_subprocess=True) → SAVE_FORK_SID
     - Materialized via `claude -p "<seed>"`. Recorded in
-      <cwd>/.claude/saved-forks.json so /spawn-from-saved-fork can fork
-      additional copies later.
+      <cwd>/.claude/saved-forks.json so `spawn_from_saved_fork.py` can
+      fork additional copies later (invoked via the /list-forks flow).
 
   Tier 2 (launched fork):
     do_save_fork_checkpoint(parent=SAVE_FORK_SID, log_to_saved_forks=False,

@@ -2,10 +2,12 @@
 """Unified list of saved-forks AND launched-forks for the current project.
 
 - saved-forks (<cwd>/.claude/saved-forks.json) are checkpoints. Each can
-  be forked into a new live window via /spawn-from-saved-fork.
+  be forked into a new live window via `spawn_from_saved_fork.py`
+  (Claude invokes this on your behalf when you say "spawn from #N").
 - launched-forks (<cwd>/.claude/launched-forks.json) are live sessions
   that were opened in their own terminal window via /launch-fork. Each
-  can be reopened in a new window via /relaunch-forked-session.
+  can be reopened in a new window via `relaunch_forked_session.py`
+  (Claude invokes this when you say "relaunch #N").
 
 Usage:
     list_forks.py [--json] [--cwd PATH]
@@ -71,17 +73,17 @@ def main() -> int:
         return 0
 
     print("=" * 80)
-    print("SAVED FORKS (checkpoints — spawn additional copies via /spawn-from-saved-fork)")
+    print("SAVED FORKS (checkpoints — say \"spawn from saved fork #N\" to fork one into a new window)")
     print("=" * 80)
     print(f"# store: {saved_json_path}")
     print("# FORK_SID   = this checkpoint's session ID")
     print("# PARENT_SID = the live session this checkpoint was forked from")
-    print("# FROM_FORK  = True if created via /spawn-from-saved-fork (fork-of-fork)")
+    print("# FROM_FORK  = True if created by forking an existing saved-fork (fork-of-fork)")
     print(render_saved_forks_table(saved_data.get("forks", [])))
 
     print()
     print("=" * 80)
-    print("LAUNCHED FORKS (live sessions — reopen via /relaunch-forked-session)")
+    print("LAUNCHED FORKS (live sessions — say \"relaunch launched fork #N\" to reopen one in a new window)")
     print("=" * 80)
     print(f"# store: {launched_json_path}")
     print("# LAUNCHED_FORK_SID = live session in the window")
@@ -91,11 +93,14 @@ def main() -> int:
 
     print()
     print("-" * 80)
-    print("Actions:")
-    print("  /relaunch-forked-session <idx-or-sid>   reopen a launched fork in a new window")
-    print("  /spawn-from-saved-fork    <idx-or-sid>  fork a saved checkpoint into a new window")
-    print("  /save-fork [label]                      create a new save-fork checkpoint")
-    print("  /launch-fork [label]                    fork the current session into a new window")
+    print("Next-step hints (just tell Claude in this chat — no slash command needed):")
+    print("  \"relaunch launched fork #N\"   reopen launched-fork N in a new window")
+    print("  \"spawn from saved fork #N\"    fork saved-fork N into a new window")
+    print()
+    print("Slash commands:")
+    print("  /save-fork [label]   create a new save-fork checkpoint of the current session")
+    print("  /launch-fork [label] fork the current session into a new GUI terminal window")
+    print("  /list-forks          show this list")
     return 0
 
 

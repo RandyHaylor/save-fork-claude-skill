@@ -11,10 +11,8 @@ Checkpoint the active Claude Code session into a separate resumable session. Thi
 | Slash command | What it does |
 |--------------|--------------|
 | **`/save-fork [label]`** (this skill) | Checkpoint the current session. Returns immediately; the actual `claude -p` subprocess runs detached. |
-| `/spawn-from-saved-fork <idx-or-sid> [label]` | Fork one of the saved checkpoints into a new GUI terminal window. |
 | `/launch-fork [label]` | One-shot: save-fork the current session, then open the result in a new GUI terminal window. Two durable forks created. |
-| `/list-forks` | Show both saved-fork and launched-fork tables for the project. |
-| `/relaunch-forked-session <idx-or-sid>` | Reopen a previously-launched fork in a new GUI terminal window. |
+| `/list-forks` | Show both saved-fork and launched-fork tables for the project. The list is the entry point for re-launching or spawning: tell Claude "relaunch #2" or "spawn from #3" in chat and it runs the corresponding script directly. |
 
 Stores written by this skill:
 
