@@ -69,7 +69,16 @@ Inside any Claude Code session:
 /save-fork before risky refactor
 ```
 
-The label is optional. The skill prints the fork's session ID, a `claude --resume <SID>` command, and the log paths. Returns in well under a second; the actual `claude -p` checkpoint subprocess runs detached.
+The label is optional. The skill prints a single line, `Created Fork: <SID>`, and returns in well under a second; the actual `claude -p` checkpoint subprocess runs detached. To resume the fork later: `claude --resume <SID>`.
+
+All four window-affecting commands follow the same one-line output style:
+
+- `/save-fork`              → `Created Fork: <SID>`
+- `/launch-fork`            → `Launched Fork: <SID>` (after the ~10-60s two-tier setup)
+- `/spawn-from-saved-fork`  → `Spawned Fork: <SID>`
+- `/relaunch-forked-session` → `Relaunched Fork: <SID>`
+
+The full lineage (parent SID, intermediate save-fork SID, terminal PID, display name, log paths) is always recoverable from `<cwd>/.claude/saved-forks.json` and `<cwd>/.claude/launched-forks.json`. Use `/list-forks` to see it.
 
 ### Fork an existing saved checkpoint into a new live window
 

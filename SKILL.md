@@ -35,7 +35,7 @@ python3 ~/.claude/skills/save-fork/save_fork_checkpoint.py "$ARGUMENTS"
 python "%USERPROFILE%\.claude\skills\save-fork\save_fork_checkpoint.py" "%*"
 ```
 
-Relay the script's output (FORK_SID, resume command, log paths) to the user verbatim and stop. Do not narrate, do not summarize the conversation, do not run any follow-up verification.
+Relay the script's output (a single `Created Fork: <SID>` line) to the user verbatim and stop. Do not narrate, do not summarize the conversation, do not run any follow-up verification.
 
 ## Constraints
 

@@ -155,15 +155,7 @@ def main(argv: list) -> int:
         parent_sid=parent_sid, label=label, cwd=cwd, wait_for_subprocess=False,
     )
 
-    project_json_path = saved_forks_json_path_for_cwd(cwd)
-    print(f"FORK_SID={fork_sid}")
-    print(f"PARENT_SID={parent_sid}")
-    print(f"LABEL={label}")
-    print(f"PID={child_pid}")
-    print(f"resume: claude --resume {fork_sid}")
-    print(f"user log:    {LOG_PATH}")
-    print(f"project log: {project_json_path}")
-    print(f"child stdout/stderr: {get_temp_log_path_for_fork(fork_sid)}")
+    print(f"Created Fork: {fork_sid}")
     return 0
 
 

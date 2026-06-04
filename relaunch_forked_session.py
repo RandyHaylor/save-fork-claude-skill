@@ -82,14 +82,8 @@ def main() -> int:
         print(f"relaunch-launched-fork: no launched fork matched {args.identifier!r}", file=sys.stderr)
         return 1
 
-    terminal_pid, terminal_argv = do_relaunch_launched_fork(entry, args.cwd)
-
-    print(f"RELAUNCHED_FORK_SID={entry['launched_fork_sid']}")
-    print(f"SAVED_FORK_SID={entry.get('saved_fork_sid','')}")
-    print(f"PARENT_SESSION_SID={entry.get('parent_session_sid','')}")
-    print(f"DISPLAY_NAME={entry.get('display_name','')!r}")
-    print(f"TERMINAL_PID={terminal_pid}")
-    print(f"TERMINAL_ARGV={terminal_argv[0]} ...")
+    do_relaunch_launched_fork(entry, args.cwd)
+    print(f"Relaunched Fork: {entry['launched_fork_sid']}")
     return 0
 
 

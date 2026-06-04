@@ -37,13 +37,12 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from active_session_locator import find_active_session_id_for_cwd, read_session_display_name
+from active_session_locator import find_active_session_id_for_cwd
 from launched_forks_store import (
     append_launched_fork_entry,
     launched_forks_json_path_for_cwd,
 )
-from save_fork_checkpoint import do_save_fork_checkpoint, LOG_PATH as USER_LEVEL_LOG_PATH
-from saved_forks_store import saved_forks_json_path_for_cwd
+from save_fork_checkpoint import do_save_fork_checkpoint
 from spawn_from_saved_fork import do_spawn_window_from_fork
 
 
@@ -82,7 +81,7 @@ def main(argv: list) -> int:
 
     # Window: resume the launched fork directly. refork_source=False so
     # no third tier is created.
-    _, terminal_pid, new_display_name, terminal_argv = do_spawn_window_from_fork(
+    _, terminal_pid, new_display_name, _ = do_spawn_window_from_fork(
         source_fork_sid=launched_fork_sid,
         label=label,
         cwd=args.cwd,
@@ -104,19 +103,7 @@ def main(argv: list) -> int:
         cwd=args.cwd,
     )
 
-    saved_json_path = saved_forks_json_path_for_cwd(args.cwd)
-    print(f"LAUNCHED_FORK_SID={launched_fork_sid}")
-    print(f"SAVED_FORK_SID={saved_fork_sid} (intermediate checkpoint)")
-    print(f"PARENT_SESSION_SID={parent_session_sid} (live session)")
-    print(f"NEW_DISPLAY_NAME={new_display_name!r}")
-    print(f"LABEL={label}")
-    print(f"TERMINAL_PID={terminal_pid}")
-    print(f"TERMINAL_ARGV={terminal_argv[0]} ...")
-    print(f"resume launched:    claude --resume {launched_fork_sid}")
-    print(f"resume saved-fork:  claude --resume {saved_fork_sid}")
-    print(f"user log:           {USER_LEVEL_LOG_PATH}")
-    print(f"saved-forks log:    {saved_json_path}")
-    print(f"launched-forks log: {launched_json_path}")
+    print(f"Launched Fork: {launched_fork_sid}")
     return 0
 
 

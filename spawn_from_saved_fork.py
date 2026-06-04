@@ -144,17 +144,10 @@ def main() -> int:
     source_fork_sid = entry["fork_sid"]
     label = " ".join(args.label_words).strip() or f"spawn-from {source_fork_sid[:8]}"
 
-    new_fork_sid, terminal_pid, new_display_name, terminal_argv = do_spawn_window_from_fork(
+    new_fork_sid, _, _, _ = do_spawn_window_from_fork(
         source_fork_sid=source_fork_sid, label=label, cwd=args.cwd,
     )
-
-    print(f"SPAWNED_FORK_SID={new_fork_sid}")
-    print(f"PARENT_FORK_SID={source_fork_sid}")
-    print(f"NEW_DISPLAY_NAME={new_display_name!r}")
-    print(f"LABEL={label}")
-    print(f"TERMINAL_PID={terminal_pid}")
-    print(f"TERMINAL_ARGV={terminal_argv[0]} ...")
-    print(f"project log: {json_path}")
+    print(f"Spawned Fork: {new_fork_sid}")
     return 0
 
 
