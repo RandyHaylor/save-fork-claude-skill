@@ -50,17 +50,25 @@ def find_active_session_id_for_cwd(cwd: str) -> str:
     return os.path.splitext(os.path.basename(newest))[0]
 
 
-def spawn_detached_save_fork_subprocess(parent_sid: str, fork_sid: str, label: str) -> subprocess.Popen:
+def spawn_detached_save_fork_subprocess(
+    parent_sid: str,
+    fork_sid: str,
+    label: str,
+    seed_kind: str = "saved fork",
+) -> subprocess.Popen:
     """Spawn `claude --resume ... --fork-session --session-id ... -p ...` detached.
 
     Returns the Popen so callers may optionally .wait() for completion (the
     /launch-fork pipeline waits so the saved fork's jsonl is complete before
     a second-tier fork is taken from it). stdout/stderr go to a per-fork
     temp log. Detach flags come from platform_utils.
+
+    ``seed_kind`` controls the seed prompt text — it reads as a status line in
+    the new fork's tail, e.g. "[saved fork: <label>]" or "[launched fork:
+    <label>]". Caller picks whichever fits the semantic.
     """
-    # Short seed: short enough to read as a footnote in the fork's tail,
-    # explicit enough that the model gives a one-liner ack and no tool use.
-    seed_prompt = f"[fork checkpoint: {label} — ack only, no tools]"
+    # Short status-style seed.
+    seed_prompt = f"[{seed_kind}: {label}]"
     child_log_path = get_temp_log_path_for_fork(fork_sid)
     child_log_fh = open(child_log_path, "wb")
     proc = subprocess.Popen(
@@ -95,6 +103,7 @@ def do_save_fork_checkpoint(
     cwd: str,
     wait_for_subprocess: bool = False,
     log_to_saved_forks: bool = True,
+    seed_kind: str = "saved fork",
 ) -> tuple:
     """Create one save-fork checkpoint from ``parent_sid``.
 
@@ -111,7 +120,7 @@ def do_save_fork_checkpoint(
     Returns (fork_sid, child_pid).
     """
     fork_sid = str(uuid.uuid4())
-    proc = spawn_detached_save_fork_subprocess(parent_sid, fork_sid, label)
+    proc = spawn_detached_save_fork_subprocess(parent_sid, fork_sid, label, seed_kind=seed_kind)
     append_checkpoint_log_line(fork_sid, parent_sid, label, proc.pid)
 
     if log_to_saved_forks:

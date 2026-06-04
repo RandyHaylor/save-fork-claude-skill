@@ -49,6 +49,10 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--json", action="store_true", help="dump raw JSON for both stores")
     parser.add_argument("--cwd", default=os.getcwd(), help="project root (default: cwd)")
+    # Slash-command stubs pass "$ARGUMENTS" verbatim, which is the empty
+    # string when the user invokes /list-forks with no args. Swallow any
+    # such trailing positional so argparse doesn't error.
+    parser.add_argument("ignored_positional", nargs="*", help=argparse.SUPPRESS)
     args = parser.parse_args()
 
     saved_json_path = saved_forks_json_path_for_cwd(args.cwd)

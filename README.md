@@ -94,7 +94,7 @@ Internally this is a two-tier operation, both tiers durable on disk **before** t
 
 Total wall-clock: ~10-60s (two consecutive `claude -p` calls). This is the cost of guaranteed durability: even if you Ctrl+C the new window before typing anything, `claude --resume <LAUNCHED_FORK_SID>` still works because the jsonl was materialized at launch time, not lazily on first input.
 
-The seed prompts are kept short — `[fork checkpoint: <label> — ack only, no tools]` — so they read as footnotes in the new window's history rather than instructions you have to scroll past.
+The seed prompts are kept short and status-like — `[saved fork: <label>]` for the tier-1 checkpoint, `[launched fork: <label>]` for the tier-2 launched fork — so they read as status lines in the new window's history rather than instructions you have to scroll past.
 
 ### List everything in the current project
 

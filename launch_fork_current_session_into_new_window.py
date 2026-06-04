@@ -62,20 +62,22 @@ def main(argv: list) -> int:
     # Tier 1: durable saved-fork checkpoint of the live session.
     saved_fork_sid, _ = do_save_fork_checkpoint(
         parent_sid=parent_session_sid,
-        label=f"{label} (via launch-fork)",
+        label=label,
         cwd=args.cwd,
         wait_for_subprocess=True,
         log_to_saved_forks=True,
+        seed_kind="saved fork",
     )
 
     # Tier 2: durable launched-fork from the saved-fork. Same -p
     # mechanism so its jsonl exists before the window opens.
     launched_fork_sid, _ = do_save_fork_checkpoint(
         parent_sid=saved_fork_sid,
-        label=f"{label} (launched-fork)",
+        label=label,
         cwd=args.cwd,
         wait_for_subprocess=True,
         log_to_saved_forks=False,  # belongs in launched-forks.json
+        seed_kind="launched fork",
     )
 
     # Window: resume the launched fork directly. refork_source=False so
