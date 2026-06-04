@@ -50,14 +50,17 @@ def find_active_session_id_for_cwd(cwd: str) -> str:
     return os.path.splitext(os.path.basename(newest))[0]
 
 
-def spawn_detached_fork_subprocess(parent_sid: str, fork_sid: str, label: str) -> int:
+def spawn_detached_save_fork_subprocess(parent_sid: str, fork_sid: str, label: str) -> subprocess.Popen:
     """Spawn `claude --resume ... --fork-session --session-id ... -p ...` detached.
 
-    Returns the child PID. Does not wait. stdout/stderr are redirected to a
-    per-fork temp log so failures can be inspected later. Detach flags come
-    from platform_utils so this works on POSIX and Windows.
+    Returns the Popen so callers may optionally .wait() for completion (the
+    /launch-fork pipeline waits so the saved fork's jsonl is complete before
+    a second-tier fork is taken from it). stdout/stderr go to a per-fork
+    temp log. Detach flags come from platform_utils.
     """
-    seed_prompt = f"save-fork checkpoint: {label}"
+    # Short seed: short enough to read as a footnote in the fork's tail,
+    # explicit enough that the model gives a one-liner ack and no tool use.
+    seed_prompt = f"[fork checkpoint: {label} — ack only, no tools]"
     child_log_path = get_temp_log_path_for_fork(fork_sid)
     child_log_fh = open(child_log_path, "wb")
     proc = subprocess.Popen(
@@ -73,7 +76,7 @@ def spawn_detached_fork_subprocess(parent_sid: str, fork_sid: str, label: str) -
         stderr=subprocess.STDOUT,
         **get_detached_popen_kwargs(),
     )
-    return proc.pid
+    return proc
 
 
 def append_checkpoint_log_line(fork_sid: str, parent_sid: str, label: str, child_pid: int) -> None:
@@ -86,6 +89,51 @@ def append_checkpoint_log_line(fork_sid: str, parent_sid: str, label: str, child
         f.write(line)
 
 
+def do_save_fork_checkpoint(
+    parent_sid: str,
+    label: str,
+    cwd: str,
+    wait_for_subprocess: bool = False,
+    log_to_saved_forks: bool = True,
+) -> tuple:
+    """Create one save-fork checkpoint from ``parent_sid``.
+
+    If ``wait_for_subprocess`` is True, blocks until the detached
+    `claude -p` subprocess exits — so the new fork's jsonl is fully
+    written (parent history + seed prompt + assistant ack) before
+    callers fork-of-fork off it. Otherwise returns immediately after spawn.
+
+    If ``log_to_saved_forks`` is False, the fork is still created on disk
+    and the user-level append log records it, but ``saved-forks.json`` is
+    NOT touched. This lets /launch-fork create an intermediate launched
+    fork via the same primitive without polluting the saved-forks list.
+
+    Returns (fork_sid, child_pid).
+    """
+    fork_sid = str(uuid.uuid4())
+    proc = spawn_detached_save_fork_subprocess(parent_sid, fork_sid, label)
+    append_checkpoint_log_line(fork_sid, parent_sid, label, proc.pid)
+
+    if log_to_saved_forks:
+        iso_now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        project_json_path = saved_forks_json_path_for_cwd(cwd)
+        append_fork_entry(
+            json_path=project_json_path,
+            iso_timestamp=iso_now,
+            fork_sid=fork_sid,
+            parent_sid=parent_sid,
+            label=label,
+            pid=proc.pid,
+            cwd=cwd,
+            spawned_from_fork=False,
+        )
+
+    if wait_for_subprocess:
+        proc.wait()
+
+    return (fork_sid, proc.pid)
+
+
 def main(argv: list) -> int:
     label_args = argv[1:]
     label = " ".join(label_args).strip()
@@ -94,24 +142,11 @@ def main(argv: list) -> int:
 
     cwd = os.getcwd()
     parent_sid = find_active_session_id_for_cwd(cwd)
-    fork_sid = str(uuid.uuid4())
-
-    child_pid = spawn_detached_fork_subprocess(parent_sid, fork_sid, label)
-    append_checkpoint_log_line(fork_sid, parent_sid, label, child_pid)
-
-    iso_now = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-    project_json_path = saved_forks_json_path_for_cwd(cwd)
-    append_fork_entry(
-        json_path=project_json_path,
-        iso_timestamp=iso_now,
-        fork_sid=fork_sid,
-        parent_sid=parent_sid,
-        label=label,
-        pid=child_pid,
-        cwd=cwd,
-        spawned_from_fork=False,
+    fork_sid, child_pid = do_save_fork_checkpoint(
+        parent_sid=parent_sid, label=label, cwd=cwd, wait_for_subprocess=False,
     )
 
+    project_json_path = saved_forks_json_path_for_cwd(cwd)
     print(f"FORK_SID={fork_sid}")
     print(f"PARENT_SID={parent_sid}")
     print(f"LABEL={label}")

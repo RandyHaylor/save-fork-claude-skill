@@ -2,5 +2,16 @@
 __pycache__/
 *.pyc
 
-# Local per-project fork store — contains this machine's real session UUIDs/PIDs
+# Local per-project fork stores — contain this machine's real session UUIDs/PIDs
 .claude/saved-forks.json
+.claude/launched-forks.json
+
+# Local per-project plan-mode artifacts
+.claude/plans/
+
+# User-invoked stub skill folders created by install-commands-as-skills.py
+# (these live under ~/.claude/skills/{launch-fork,list-forks,relaunch-forked-session}/
+# in normal use, NOT inside this repo — but ignore here too if anyone tries to commit a copy)
+launch-fork/
+list-forks/
+relaunch-forked-session/

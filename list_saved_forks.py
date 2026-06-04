@@ -47,6 +47,9 @@ def main() -> int:
         return 0
 
     print(f"# saved-forks store: {json_path}")
+    print("# FORK_SID   = this checkpoint's session ID")
+    print("# PARENT_SID = the live session this checkpoint was forked from")
+    print("# FROM_FORK  = True if created via /spawn-from-saved-fork (fork-of-fork)")
     print(render_forks_table(data.get("forks", [])))
     return 0
 
