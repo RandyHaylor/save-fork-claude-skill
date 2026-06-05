@@ -24,7 +24,7 @@ py install.py             # Windows (or `python install.py` if `py` isn't on PAT
 
 `install.py` does three things:
 
-1. Copies the cloned repo to `~/.claude/skills/save-fork/` (creating the directory if needed). If you cloned directly into that path, the copy step is skipped. Existing local files like your `<target>/.claude/saved-forks.json` and `launched-forks.json` stores are preserved.
+1. Copies the cloned repo to `~/.claude/skills/save-fork/` (creating the directory if needed). Existing local files like your `<target>/.claude/saved-forks.json` and `launched-forks.json` stores are preserved.
 2. Marks the Python entry-point scripts executable on POSIX (no-op on Windows).
 3. Runs `install-commands-as-skills.py` to create `~/.claude/skills/{launch-fork, list-forks}/SKILL.md` stub folders that register `/launch-fork` and `/list-forks` as Claude Code slash commands. The pre-existing `/save-fork` skill folder (the one you just installed) provides the third command.
 

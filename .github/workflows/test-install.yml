@@ -1,0 +1,126 @@
+name: test-install
+
+# Verifies install.py end-to-end on Linux, macOS, and Windows:
+#  - Scenario A: clone to scratch dir → run install.py → expects bundle
+#    at ~/.claude/skills/save-fork/ and stubs at /launch-fork, /list-forks.
+#  - Scenario A idempotency: re-run install.py → still passes.
+#  - Uninstall test: stub uninstaller removes stubs, leaves bundle intact.
+#  - Scenario B: clone INTO ~/.claude/skills/<repo-name>/ → run install.py
+#    → expects no copy, bundle stays under repo name, stubs still created.
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-install:
+    name: install.py on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash  # works on all three runners (Git Bash on Windows)
+
+    steps:
+      - name: Checkout repo into a scratch dir
+        uses: actions/checkout@v4
+        with:
+          path: cloned-repo
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Show environment
+        run: |
+          python --version
+          echo "HOME=$HOME"
+          echo "PWD=$PWD"
+
+      # ---- Scenario A: install from scratch dir ---------------------------
+
+      - name: "Scenario A — run install.py from scratch dir"
+        run: |
+          cd cloned-repo
+          python install.py
+
+      - name: "Scenario A — verify main skill bundle copied to standard target"
+        run: |
+          test -f "$HOME/.claude/skills/save-fork/install.py"
+          test -f "$HOME/.claude/skills/save-fork/SKILL.md"
+          test -f "$HOME/.claude/skills/save-fork/save_fork_checkpoint.py"
+          test -f "$HOME/.claude/skills/save-fork/launch_fork_current_session_into_new_window.py"
+          test -f "$HOME/.claude/skills/save-fork/list_forks.py"
+          test -f "$HOME/.claude/skills/save-fork/install-commands-as-skills.py"
+          test -f "$HOME/.claude/skills/save-fork/uninstall-commands-as-skills.py"
+
+      - name: "Scenario A — verify stub skill folders created with sentinels"
+        run: |
+          test -f "$HOME/.claude/skills/launch-fork/SKILL.md"
+          test -f "$HOME/.claude/skills/launch-fork/.installed-by-save-fork-commands-installer"
+          test -f "$HOME/.claude/skills/list-forks/SKILL.md"
+          test -f "$HOME/.claude/skills/list-forks/.installed-by-save-fork-commands-installer"
+
+      - name: "Scenario A — rendered stub points at the correct source path"
+        run: |
+          grep -q "save-fork/launch_fork_current_session_into_new_window.py" \
+            "$HOME/.claude/skills/launch-fork/SKILL.md"
+          grep -q "save-fork/list_forks.py" \
+            "$HOME/.claude/skills/list-forks/SKILL.md"
+
+      # ---- Idempotency: re-run install.py --------------------------------
+
+      - name: "Scenario A idempotency — re-run install.py from scratch dir"
+        run: |
+          cd cloned-repo
+          python install.py
+          test -f "$HOME/.claude/skills/save-fork/SKILL.md"
+          test -f "$HOME/.claude/skills/launch-fork/SKILL.md"
+          test -f "$HOME/.claude/skills/list-forks/SKILL.md"
+
+      # ---- Uninstall stubs ------------------------------------------------
+
+      - name: "Stub uninstaller removes only stub dirs, leaves bundle intact"
+        run: |
+          python "$HOME/.claude/skills/save-fork/uninstall-commands-as-skills.py"
+          test ! -d "$HOME/.claude/skills/launch-fork"
+          test ! -d "$HOME/.claude/skills/list-forks"
+          test -d "$HOME/.claude/skills/save-fork"
+          test -f "$HOME/.claude/skills/save-fork/SKILL.md"
+
+      # ---- Scenario B: clone directly into ~/.claude/skills/ -------------
+
+      - name: "Scenario B prep — wipe the standard target and place repo under ~/.claude/skills/"
+        run: |
+          rm -rf "$HOME/.claude/skills/save-fork"
+          mkdir -p "$HOME/.claude/skills"
+          cp -r cloned-repo "$HOME/.claude/skills/save-fork-claude-skill"
+          # Drop the .git dir so we mimic the user cloning the repo there.
+          rm -rf "$HOME/.claude/skills/save-fork-claude-skill/.git"
+
+      - name: "Scenario B — run install.py from ~/.claude/skills/<repo>"
+        run: |
+          cd "$HOME/.claude/skills/save-fork-claude-skill"
+          python install.py
+
+      - name: "Scenario B — bundle left in place, no copy to standard target"
+        run: |
+          test -f "$HOME/.claude/skills/save-fork-claude-skill/install.py"
+          test -f "$HOME/.claude/skills/save-fork-claude-skill/SKILL.md"
+          # The standard target was wiped — install should NOT have re-created it.
+          test ! -d "$HOME/.claude/skills/save-fork"
+
+      - name: "Scenario B — stubs installed pointing at the cloned location"
+        run: |
+          test -f "$HOME/.claude/skills/launch-fork/SKILL.md"
+          test -f "$HOME/.claude/skills/list-forks/SKILL.md"
+          grep -q "save-fork-claude-skill/launch_fork_current_session_into_new_window.py" \
+            "$HOME/.claude/skills/launch-fork/SKILL.md"
+          grep -q "save-fork-claude-skill/list_forks.py" \
+            "$HOME/.claude/skills/list-forks/SKILL.md"

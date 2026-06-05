@@ -23,7 +23,12 @@ import sys
 
 
 SKILLS_ROOT = os.path.expanduser("~/.claude/skills")
-SAVE_FORK_SKILL_DIR = os.path.join(SKILLS_ROOT, "save-fork")
+# Source dir = wherever this installer file lives. That's the skill bundle's
+# actual on-disk location, whether at ~/.claude/skills/save-fork/ (the
+# standard) or ~/.claude/skills/save-fork-claude-skill/ (when the user
+# cloned directly into the skills folder). Rendered stub SKILL.md files
+# point at scripts under THIS directory.
+SOURCE_SKILL_DIR_ABS = os.path.dirname(os.path.abspath(__file__))
 INSTALLER_SENTINEL_FILENAME = ".installed-by-save-fork-commands-installer"
 
 
@@ -51,10 +56,31 @@ COMMAND_SKILL_STUB_REGISTRY = [
 ]
 
 
+def _render_path_pair_relative_to_home(absolute_path: str) -> tuple:
+    """Return (posix_form, windows_form) of an absolute path.
+
+    If absolute_path is under the user's home directory, both forms use
+    home-relative notation (``~/foo/bar`` and ``%USERPROFILE%\\foo\\bar``)
+    so the rendered SKILL.md works for any user with the same install
+    layout. Otherwise both forms use the bare absolute path (the Windows
+    variant will not be valid on a different OS — that's the install
+    user's choice for installing outside HOME).
+    """
+    home = os.path.expanduser("~")
+    try:
+        rel_to_home = os.path.relpath(absolute_path, home)
+    except ValueError:
+        rel_to_home = None
+    if rel_to_home is None or rel_to_home.startswith(".."):
+        return (absolute_path, absolute_path.replace("/", "\\"))
+    posix_form = "~/" + rel_to_home.replace(os.sep, "/")
+    windows_form = "%USERPROFILE%\\" + rel_to_home.replace(os.sep, "\\")
+    return (posix_form, windows_form)
+
+
 def _render_stub_skill_markdown(skill_name: str, description: str, script_relpath: str) -> str:
-    posix_script_path = "~/.claude/skills/save-fork/" + script_relpath
-    # Hardcode Windows-style separators — os.path.join on POSIX would normalize to '/'.
-    windows_script_path = "%USERPROFILE%\\.claude\\skills\\save-fork\\" + script_relpath.replace("/", "\\")
+    absolute_script_path = os.path.join(SOURCE_SKILL_DIR_ABS, script_relpath)
+    posix_script_path, windows_script_path = _render_path_pair_relative_to_home(absolute_script_path)
     return f"""---
 name: {skill_name}
 description: {description}
