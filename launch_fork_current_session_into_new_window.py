@@ -37,7 +37,11 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from active_session_locator import find_active_session_id_for_cwd
+from active_session_locator import (
+    compute_next_fork_name,
+    find_active_session_id_for_cwd,
+    read_session_display_name,
+)
 from launched_forks_store import (
     append_launched_fork_entry,
     launched_forks_json_path_for_cwd,
@@ -52,11 +56,18 @@ def main(argv: list) -> int:
     parser.add_argument("--cwd", default=os.getcwd(), help="project root (default: cwd)")
     args = parser.parse_args(argv[1:])
 
+    parent_session_sid = find_active_session_id_for_cwd(args.cwd)
+
     label = " ".join(args.label_words).strip()
     if not label:
-        label = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    parent_session_sid = find_active_session_id_for_cwd(args.cwd)
+        # Default: derive from the parent session's display name, appending
+        # or incrementing a "(fork)"/"(fork-N)" suffix. Fall back to a UTC
+        # timestamp if the parent session has no display name set.
+        parent_display_name = read_session_display_name(parent_session_sid, args.cwd)
+        if parent_display_name:
+            label = compute_next_fork_name(parent_display_name)
+        else:
+            label = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
     # Tier 1: durable saved-fork checkpoint of the live session.
     saved_fork_sid, _ = do_save_fork_checkpoint(

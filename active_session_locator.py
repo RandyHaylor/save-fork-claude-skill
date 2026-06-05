@@ -9,7 +9,34 @@ jsonl in that directory.
 import glob
 import json
 import os
+import re
 from typing import Optional
+
+
+_FORK_SUFFIX_PATTERN = re.compile(r"\s*\(fork(?:-(\d+))?\)\s*$")
+
+
+def compute_next_fork_name(current_name: str) -> str:
+    """Append or increment a ``(fork)`` / ``(fork-N)`` suffix on a name.
+
+    Examples:
+        "my project"              -> "my project (fork)"
+        "my project (fork)"       -> "my project (fork-2)"
+        "my project (fork-2)"     -> "my project (fork-3)"
+        "my project (fork-99)"    -> "my project (fork-100)"
+
+    Whitespace before the suffix is normalized to a single space.
+    """
+    match = _FORK_SUFFIX_PATTERN.search(current_name)
+    if not match:
+        return f"{current_name} (fork)"
+    captured_n_str = match.group(1)
+    if captured_n_str is None:
+        next_fork_number = 2
+    else:
+        next_fork_number = int(captured_n_str) + 1
+    base_name = current_name[: match.start()].rstrip()
+    return f"{base_name} (fork-{next_fork_number})"
 
 
 def encode_cwd_for_claude_project_dir(cwd: str) -> str:

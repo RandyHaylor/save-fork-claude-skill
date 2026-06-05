@@ -19,7 +19,11 @@ import uuid
 
 # Local import — same directory.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from active_session_locator import find_active_session_id_for_cwd
+from active_session_locator import (
+    compute_next_fork_name,
+    find_active_session_id_for_cwd,
+    read_session_display_name,
+)
 from saved_forks_store import (
     append_fork_entry,
     saved_forks_json_path_for_cwd,
@@ -131,13 +135,21 @@ def do_save_fork_checkpoint(
 
 
 def main(argv: list) -> int:
+    cwd = os.getcwd()
+    parent_sid = find_active_session_id_for_cwd(cwd)
+
     label_args = argv[1:]
     label = " ".join(label_args).strip()
     if not label:
-        label = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        # Default: derive from the parent session's display name, appending
+        # or incrementing a "(fork)"/"(fork-N)" suffix. Fall back to a UTC
+        # timestamp if the parent session has no display name set.
+        parent_display_name = read_session_display_name(parent_sid, cwd)
+        if parent_display_name:
+            label = compute_next_fork_name(parent_display_name)
+        else:
+            label = datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
-    cwd = os.getcwd()
-    parent_sid = find_active_session_id_for_cwd(cwd)
     fork_sid, child_pid = do_save_fork_checkpoint(
         parent_sid=parent_sid, label=label, cwd=cwd, wait_for_subprocess=False,
     )

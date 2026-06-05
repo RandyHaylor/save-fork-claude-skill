@@ -32,7 +32,7 @@ Once installed, the three slash commands work in any Claude Code session:
 - **`/launch-fork`** — immediately open a current-session copy in a new window (and save a separate copy as a checkpoint).
 - **`/list-forks`** — show saved and launched forks. You can request to resume or launch a fork from one by name (just tell Claude "relaunch #2" or "spawn from #3").
 
-Both `/save-fork` and `/launch-fork` accept an optional label. With no label, a UTC timestamp is used.
+Both `/save-fork` and `/launch-fork` accept an optional label. With no label, the current session's display name is used with an appended/incremented `(fork)` / `(fork-N)` suffix — e.g. `my project` → `my project (fork)`, `my project (fork)` → `my project (fork-2)`, `my project (fork-2)` → `my project (fork-3)`. If the session has no display name set, a UTC timestamp is used instead.
 
 ---
 

@@ -32,7 +32,7 @@ from saved_forks_store import (
     saved_forks_json_path_for_cwd,
 )
 from list_saved_forks import render_forks_table
-from active_session_locator import read_session_display_name
+from active_session_locator import compute_next_fork_name, read_session_display_name
 from platform_utils import (
     build_interactive_terminal_launch_argv,
     get_detached_popen_kwargs,
@@ -63,7 +63,7 @@ def do_spawn_window_from_fork(
     Returns (resumed_or_new_sid, terminal_pid, new_display_name, terminal_argv).
     """
     parent_display_name = read_session_display_name(source_fork_sid, cwd) or "Claude"
-    new_display_name = f"{parent_display_name} (fork)"
+    new_display_name = compute_next_fork_name(parent_display_name)
 
     if refork_source:
         new_fork_sid = str(uuid.uuid4())
