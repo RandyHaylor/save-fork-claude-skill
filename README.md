@@ -8,14 +8,50 @@ Simply: This is a skill with the commands and instruction needed to guide Claude
 
 ---
 
+## Installation
+
+Two commands. Works on Linux, macOS, and Windows. Standard library only — no third-party packages.
+
+```bash
+# 1. Clone anywhere.
+git clone https://github.com/RandyHaylor/save-fork-claude-skill.git
+cd save-fork-claude-skill
+
+# 2. Run the installer.
+python3 install.py        # macOS / Linux
+py install.py             # Windows (or `python install.py` if `py` isn't on PATH)
+```
+
+`install.py` does three things:
+
+1. Copies the cloned repo to `~/.claude/skills/save-fork/` (creating the directory if needed). If you cloned directly into that path, the copy step is skipped. Existing local files like your `<target>/.claude/saved-forks.json` and `launched-forks.json` stores are preserved.
+2. Marks the Python entry-point scripts executable on POSIX (no-op on Windows).
+3. Runs `install-commands-as-skills.py` to create `~/.claude/skills/{launch-fork, list-forks}/SKILL.md` stub folders that register `/launch-fork` and `/list-forks` as Claude Code slash commands. The pre-existing `/save-fork` skill folder (the one you just installed) provides the third command.
+
+Re-run `python3 install.py` after `git pull` to update — it's idempotent.
+
+**Uninstall the slash-command stubs only** (leaves `~/.claude/skills/save-fork/` and your stores intact):
+
+```bash
+python3 ~/.claude/skills/save-fork/uninstall-commands-as-skills.py
+# Windows:
+python "%USERPROFILE%\.claude\skills\save-fork\uninstall-commands-as-skills.py"
+```
+
+Only directories carrying the sentinel file `.installed-by-save-fork-commands-installer` are removed, so unrelated skill folders are never touched.
+
+Requirements: Python 3.8+ on `PATH`, `claude` CLI on `PATH`.
+
+---
+
 ## What's included
 
 Three user-facing slash commands (installed by `install-commands-as-skills.py`):
 
 | Slash command | Effect |
 |--------------|--------|
-| **`/save-fork [label]`** | Snapshot the current conversation as a new resumable session. Your active session continues unchanged. |
-| **`/launch-fork [label]`** | One-shot: save-fork the live session, then open the result in a new GUI terminal window — two durable forks created (a checkpoint plus a live working session in a window). |
+| **`/save-fork [label]`** | Snapshot the current conversation as a new resumable session. Your active session continues unchanged. `[label]` is **optional** — a UTC timestamp is used if omitted. |
+| **`/launch-fork [label]`** | One-shot: save-fork the live session, then open the result in a new GUI terminal window — two durable forks created (a checkpoint plus a live working session in a window). `[label]` is **optional** — a UTC timestamp is used if omitted. |
 | **`/list-forks`** | Show BOTH the saved-forks and launched-forks tables for the current project. **This is the entry point for re-launching or spawning** — after viewing, just tell Claude in the chat "relaunch #2" or "spawn from #3" and it will run the right script directly. |
 
 Two helper scripts live in the repo but are NOT exposed as slash commands — they're called by Claude on your behalf from the `/list-forks` flow:
@@ -28,37 +64,6 @@ Three on-disk stores:
 - **User-level append log:** `~/.claude/save-fork-log.txt` — quick scan across all projects.
 - **Project saved-forks store:** `<cwd>/.claude/saved-forks.json` — checkpoint records.
 - **Project launched-forks store:** `<cwd>/.claude/launched-forks.json` — windowed live-session records, each linking back to the saved-fork it was launched from and the original live session everything branched off.
-
----
-
-## Installation
-
-Place this repo at:
-
-- **macOS / Linux:** `~/.claude/skills/save-fork/`
-- **Windows:** `%USERPROFILE%\.claude\skills\save-fork\`
-
-Then run the installer once to register the slash-command stubs as skill folders:
-
-```bash
-# macOS / Linux
-python3 ~/.claude/skills/save-fork/install-commands-as-skills.py
-
-# Windows
-python "%USERPROFILE%\.claude\skills\save-fork\install-commands-as-skills.py"
-```
-
-The installer creates `~/.claude/skills/{launch-fork, list-forks}/SKILL.md` stubs that delegate to the scripts in this repo. The pre-existing `/save-fork` skill folder (if you already had it) is unchanged. `spawn_from_saved_fork.py` and `relaunch_forked_session.py` are NOT registered as slash commands — they're invoked by Claude on your behalf when you act on a row from `/list-forks`.
-
-To remove the stubs:
-
-```bash
-python3 ~/.claude/skills/save-fork/uninstall-commands-as-skills.py
-```
-
-Only directories carrying a sentinel file `.installed-by-save-fork-commands-installer` are removed, so unrelated skill folders are never touched.
-
-Requirements: Python 3 on `PATH`, `claude` CLI on `PATH`. Standard library only — no third-party packages.
 
 ---
 
@@ -187,7 +192,8 @@ This skill leans on several non-obvious techniques. They are described here in p
 | `launched_forks_store.py` | Shared helpers for the atomic, schema-versioned launched-forks JSON store. |
 | `active_session_locator.py` | Discover the active session ID and read its display name from the JSONL. |
 | `platform_utils.py` | Cross-platform helpers: temp-log paths, detached-spawn flags, terminal launch argv, OSC-title injection, post-exit resume-hint block. |
-| `install-commands-as-skills.py` / `uninstall-commands-as-skills.py` | Register/remove the slash-command skill stubs. |
+| `install.py` | One-shot installer: copies the repo to `~/.claude/skills/save-fork/`, chmods scripts, runs the stub installer below. |
+| `install-commands-as-skills.py` / `uninstall-commands-as-skills.py` | Register/remove the slash-command skill stubs (called by `install.py`). |
 
 ---
 
