@@ -24,13 +24,42 @@ def get_session_jsonl_path(session_id: str, cwd: str) -> str:
 
 
 def find_active_session_id_for_cwd(cwd: str) -> str:
-    encoded = encode_cwd_for_claude_project_dir(cwd)
-    proj = os.path.expanduser(os.path.join("~/.claude/projects", encoded))
-    files = glob.glob(os.path.join(proj, "*.jsonl"))
-    if not files:
-        raise SystemExit(f"No Claude session jsonl found for cwd {cwd!r}")
-    newest = max(files, key=os.path.getmtime)
-    return os.path.splitext(os.path.basename(newest))[0]
+    """Find the running session ID by encoding ``cwd`` (or any ancestor) and
+    looking for the matching project dir under ~/.claude/projects/.
+
+    Claude Code keys its project dirs to the path the ``claude`` CLI was
+    launched from, NOT to whatever cwd a subprocess (or a /save-fork
+    bash call) happens to be running in. So if /save-fork fires from a
+    subdir of the project root, the encoded cwd has no project dir.
+
+    Resolution: walk up from ``cwd`` to filesystem root, collect every
+    candidate ``~/.claude/projects/<encoded>/`` that exists and contains
+    jsonls, and return the SID of the globally newest-mtime jsonl among
+    all candidates. The session that's currently being written to has
+    the most-recent mtime — that's the running session.
+    """
+    candidate_jsonl_paths = []
+    visited = set()
+    current_dir = os.path.abspath(cwd)
+    while current_dir and current_dir not in visited:
+        visited.add(current_dir)
+        encoded = encode_cwd_for_claude_project_dir(current_dir)
+        candidate_project_dir = os.path.expanduser(
+            os.path.join("~/.claude/projects", encoded)
+        )
+        candidate_jsonl_paths.extend(
+            glob.glob(os.path.join(candidate_project_dir, "*.jsonl"))
+        )
+        parent_dir = os.path.dirname(current_dir)
+        if parent_dir == current_dir:
+            break
+        current_dir = parent_dir
+    if not candidate_jsonl_paths:
+        raise SystemExit(
+            f"No Claude session jsonl found for cwd {cwd!r} or any ancestor"
+        )
+    newest_jsonl_path = max(candidate_jsonl_paths, key=os.path.getmtime)
+    return os.path.splitext(os.path.basename(newest_jsonl_path))[0]
 
 
 def read_session_display_name(session_id: str, cwd: str) -> Optional[str]:

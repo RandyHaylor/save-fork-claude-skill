@@ -12,7 +12,6 @@ Usage:
 The label is optional; it goes into the fork's seed prompt and the log.
 """
 import datetime
-import glob
 import os
 import subprocess
 import sys
@@ -20,6 +19,7 @@ import uuid
 
 # Local import — same directory.
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from active_session_locator import find_active_session_id_for_cwd
 from saved_forks_store import (
     append_fork_entry,
     saved_forks_json_path_for_cwd,
@@ -31,23 +31,7 @@ from platform_utils import (
 
 
 HOME_CLAUDE_DIR = os.path.expanduser("~/.claude")
-PROJECTS_DIR = os.path.join(HOME_CLAUDE_DIR, "projects")
 LOG_PATH = os.path.join(HOME_CLAUDE_DIR, "save-fork-log.txt")
-
-
-def encode_cwd_for_project_dir(cwd: str) -> str:
-    """Match Claude Code's project-dir encoding: non-alnum -> '-'."""
-    return "".join(c if c.isalnum() else "-" for c in cwd)
-
-
-def find_active_session_id_for_cwd(cwd: str) -> str:
-    encoded = encode_cwd_for_project_dir(cwd)
-    proj = os.path.join(PROJECTS_DIR, encoded)
-    files = glob.glob(os.path.join(proj, "*.jsonl"))
-    if not files:
-        raise SystemExit(f"save-fork: no session jsonl found for cwd {cwd!r}")
-    newest = max(files, key=os.path.getmtime)
-    return os.path.splitext(os.path.basename(newest))[0]
 
 
 def spawn_detached_save_fork_subprocess(
